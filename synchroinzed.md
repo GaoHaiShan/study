@@ -1,12 +1,32 @@
-synchronized 修饰范围： 静态方法 获取当前对象的锁（锁定这个类的 Class
-对象，所有实例对象均 copy 自这个大的 Class 对象） 实例方法
-获取当前对象的锁 代码块 获取某个对象锁
+synchronized 修饰范围：
+    
+    静态方法 获取当前对象的锁（锁定这个类的 Class对象，所有实例对象均 copy 自这个大的 Class 对象） 
+    
+    实例方法 获取当前对象的锁 
+    
+    代码块 获取某个对象锁
 
-对象内存结构： 非数组对象 用 instanceOopDesc 类描述 数组对象
-用arrayOopDesc 类描述 非数组对象和数组对象 均继承 oopDesc 类 oopDesc:
-对象头 (*mark)(MarkWorld)： age*bits 分代年龄 lock\_bits 锁标识
-biased\_lock\_bits 是否为偏向锁 数据区域 \_metadata： 储存（类的源信息
-对应的指针） 对其填充
+对象内存结构：
+
+    非数组对象 用 instanceOopDesc 类描述 
+    
+    数组对象 用arrayOopDesc 类描述 
+    
+    非数组对象和数组对象 均继承 oopDesc 类
+    
+    oopDesc:
+
+       对象头 (_mark)(MarkWorld)： 
+       
+       age_bits 分代年龄 
+       
+       lock_bits 锁标识
+       
+       biased\_lock\_bits 是否为偏向锁 
+       
+       数据区域 _metadata： 储存（类的源信息对应的指针） 
+       
+    对其填充
 
 对象头在特定锁中 32 位空间分配 无锁状态: 25位 存储对象的hashCode 4位
 存储分代年龄 1位记录是否为偏向锁值为0 2位 存储所标志位值为01\
