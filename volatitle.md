@@ -125,7 +125,7 @@ public class Volatitle implements Runnable {
 
             确保屏障之前的读写操作完全同步到内存之后，在进行全屏障之后的读写操作。
 
-#JMM Java Memory Model 内存模型：		
+# JMM Java Memory Model 内存模型：		
 
         jmm 属于语言级别的对硬件模型的抽象，它定义了多线程程序的读写操作的行为规范：在jvm 虚拟机中 将共享变量储存到内存，
     以及从内存中取出共享变量的底层实现细节。注意: jmm 依旧存在重排序以及缓存不一致问题。
