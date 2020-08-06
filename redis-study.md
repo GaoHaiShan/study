@@ -26,7 +26,7 @@
 ```
 ## 命令:
 
-![avatar](/home/haishan/Pictures/String.png)
+![avatar](pic/String.png)
 
 # hash(ziplist\hashtable)
 ## ziplist整体数据结构：
@@ -79,7 +79,7 @@
 
 ### 命令
 
-![avatar](/home/haishan/Pictures/hash.png)
+![avatar](pic/hash.png)
 
 # list(quicklist)
 
@@ -88,16 +88,16 @@
 基于双向链表　借鉴二分法或查找树实现思想的跳表
 
 ## 命令 
-![avatar](/home/haishan/Pictures/list.png)
+![avatar](pic/list.png)
 
 # set 基于hashtable value 为 null实现
 
 ## 命令
 
-![avatar](/home/haishan/Pictures/set.png)
+![avatar](pic/set.png)
 
 # zset 
 
 ## 命令
 
-![avatar](/home/haishan/Pictures/zset.png)
+![avatar](pic/zset.png)
