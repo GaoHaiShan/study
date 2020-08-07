@@ -1,31 +1,31 @@
 
-- [redis 应用+底层实现](#redis--------)
-  * [redis数据结构：](#redis-----)
-    + [String（int(整形)\emstr(字符长度小于44字节)\row（字符串大于44字节））](#string-int-----emstr-------44----row------44----)
-    + [命令:](#---)
-  * [hash(ziplist\hashtable)](#hash-ziplist-hashtable-)
-    + [ziplist整体数据结构：](#ziplist-------)
-    + [zlentry数据结构：](#zlentry-----)
-    + [hashtable 结构(转换条件：任何一个节点大于64个字节或个数大于512)](#hashtable-----------------64--------512-)
-      - [扩容 缩容](#-----)
-      - [命令](#--)
-  * [list(quicklist)](#list-quicklist-)
-    + [数据结构：](#-----)
-    + [命令](#---1)
-  * [set 基于hashtable value 为 null实现](#set---hashtable-value---null--)
-    + [命令](#---2)
+- [redis 应用+底层实现](#redis-应用底层实现)
+  * [redis数据结构：](#redis数据结构)
+    + [String（int(整形)\emstr(字符长度小于44字节)\row（字符串大于44字节））](#stringint整形emstr字符长度小于44字节row字符串大于44字节)
+    + [命令:](#命令)
+  * [hash(ziplist\hashtable)](#hashziplisthashtable)
+    + [ziplist整体数据结构：](#ziplist整体数据结构)
+    + [zlentry数据结构：](#zlentry数据结构)
+    + [hashtable 结构(转换条件：任何一个节点大于64个字节或个数大于512)](#hashtable-结构转换条件任何一个节点大于64个字节或个数大于512)
+      - [扩容 缩容](#扩容-缩容)
+      - [命令](#命令-1)
+  * [list(quicklist)](#listquicklist)
+    + [数据结构：](#数据结构)
+    + [命令](#命令-2)
+  * [set 基于hashtable value 为 null实现](#set-基于hashtable-value-为-null实现)
+    + [命令](#命令-3)
   * [zset](#zset)
-    + [命令](#---3)
-  * [redis　lua 用来做事务](#redis-lua------)
-    + [命令](#---4)
-    + [LUＡ 脚本语法](#lu------)
+    + [命令](#命令-4)
+  * [发布订阅实现](#发布订阅实现)
+  * [redis　lua 用来做事务](#redislua-用来做事务)
+    + [命令](#命令-5)
+    + [LUＡ 脚本语法](#luａ-脚本语法)
 
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 # redis 应用+底层实现
 
-[TOC]
-
 >redis 整体为 key value形式存储　结构为 dictEntry，dictEntry结构如下
+
 >> key为ＳDS     
 >> value　为 redisObject，redisObject结构如下
 ```json
@@ -127,7 +127,7 @@
 
 ![avatar](pic/zset.png)
 
-##　发布订阅实现
+## 发布订阅实现
 
 //订阅频道
 
@@ -193,7 +193,7 @@ java demo
 ### LUＡ 脚本语法
 [lua w3c school教程](https://www.runoob.com/lua/lua-loops.html)
 
-##＃ lua　脚本缓存
+## lua　脚本缓存
 
 script load 设置缓存
 
