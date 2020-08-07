@@ -1,4 +1,5 @@
 # redis 应用+底层实现
+[toc]
 
 >redis 整体为 key value形式存储　结构为 dictEntry，dictEntry结构如下
 >> key为ＳDS     
