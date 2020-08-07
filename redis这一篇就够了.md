@@ -23,6 +23,8 @@
 <small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
 # redis 应用+底层实现
 
+[TOC]
+
 >redis 整体为 key value形式存储　结构为 dictEntry，dictEntry结构如下
 >> key为ＳDS     
 >> value　为 redisObject，redisObject结构如下
