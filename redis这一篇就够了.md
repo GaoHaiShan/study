@@ -267,6 +267,7 @@ lua-time-limit 5000
 算法选择
 ![avatar](pic/回收算法.png)
 　
+
 ### lru算法基于最近访问时间
 
 redis　中lru算法主要的思想大致为：
@@ -327,7 +328,7 @@ redis　lfu 算法思想大致为：
 
 #### rdb文件其他配置
 
-**![image-20200821161029444](/home/haishan/project/study/pic/image-20200821161029444.png)**
+**![image-20200821161029444](pic/image-20200821161029444.png)**
 
 ### aof文件（默认不开启）
 
@@ -431,7 +432,7 @@ sentinel parallel-syncs redis-master 1
     最后sentinel 同步给其他sentinel 节点，取消当前sentinel状态．
 ```
 
-![image-20200825152848918](/home/haishan/project/study/pic/image-20200825152848918.png)
+![image-20200825152848918](pic/image-20200825152848918.png)
 
 
 
@@ -506,7 +507,7 @@ client-output-buffer-limit <class> <hard limit> <soft limit> <soft seconds>
 
 
 
-![image-20200825160643698](/home/haishan/project/study/pic/image-20200825160643698.png)
+![image-20200825160643698](pic/image-20200825160643698.png)
 
 ```
 //例如
