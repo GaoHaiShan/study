@@ -1,0 +1,233 @@
+# 活动云使用jwt问题总结与方案回顾
+
+## 依赖
+
+```xml
+<dependency>
+    <groupId>com.auth0</groupId>
+    <artifactId>java-jwt</artifactId>
+    <version>3.4.0</version>
+</dependency>
+```
+
+## Jwt工具类
+
+```java
+public class JwtTokenConfig {
+    //盐
+    private static final String SECRET = ".......";
+
+    /**
+     * 获取 ID以及登录时效，通过 jwt 加密成 token
+     */
+    public static String setUserData(Map<String,Object> userdata) throws Exception {
+        //定义 jwt header 信息
+        Map<String,Object> header = new HashMap<>();
+        header.put("alg", "HS256");
+        header.put("typ", "JWT");
+        String token="";
+        //获取 jwtbuilder
+        JWTCreator.Builder builder = JWT.create()
+        .withHeader(header)
+        //通过 rc4 算法 对用户id、登录时效进行加密，防止用户信息泄露
+        .withClaim("userData",RC4.encrypt(userdata));
+        //设置token有效时间 如果前台勾选14天内自动登录 则设置为 14 天，否则设置为 1小时
+        if ("0".equals(userdata.get("isCheck").toString())){
+            //有效时间
+            token = builder.withExpiresAt(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * 14))
+                    //签发时间
+                    .withIssuedAt(new Date())
+                    .sign(Algorithm.HMAC256(SECRET));
+        }else {
+            //有效时间
+            token = builder.withExpiresAt(new Date(System.currentTimeMillis() + 1000 * 60 * 60))
+                    //签发时间
+                    .withIssuedAt(new Date())
+                    .sign(Algorithm.HMAC256(SECRET));
+        }
+
+        return token;
+    }
+    //解密token 获取token 内部信息
+    public static Map<String,Object> getUserData(String token, HttpServletResponse response) throws Exception {
+        DecodedJWT jwt;
+        try{
+            JWTVerifier verifier = JWT.require(Algorithm.HMAC256(SECRET)).build();
+            jwt = verifier.verify(token);
+        }catch (Exception e) {
+            //解码异常则抛出异常
+            return null;
+        }
+        Map<String, Claim> res =  jwt.getClaims();
+        if (res.get("userData")==null){
+            return null;
+        }
+        //对用户信息解密并返回
+        return RC4.decrypt(res.get("userData").asString());
+    }
+    // 设置临时token 保存用户信息 10 秒内有效
+    public static String setSmallUserdata(Map<String, Object> userdata) {
+        Map<String,Object> header = new HashMap<>();
+        header.put("alg", "HS256");
+        header.put("typ", "JWT");
+        return JWT.create()
+                .withHeader(header)
+                //对用户信息加密
+                .withClaim("userData",RC4.encrypt(userdata))
+                //10秒临时token
+                .withIssuedAt(new Date(System.currentTimeMillis()+1000 * 10))
+                .withIssuedAt(new Date())
+                .sign(Algorithm.HMAC256(SECRET));
+    }
+}
+```
+
+## 用户信息加密解密（网上copy）
+
+```java
+public class RC4 {
+
+    //盐
+    public static final String ACCESSKEY = "zuo_chu_qu_huo_dong_yunSECRET";
+
+
+    /** 加密 **/
+    public static String encrypt(Map<String,Object> userdata) {
+        JSONObject param = new JSONObject();
+        param.putAll(userdata);
+        return encrypt(param.toJSONString(), ACCESSKEY);
+    }
+
+    /** 解密 **/
+    public static Map<String,Object> decrypt(String data) {
+        String userdata = decrypt(data,ACCESSKEY);
+        JSONObject res = JSONObject.parseObject(userdata);
+        Map<String,Object> user = new HashMap<>();
+        user.putAll(res);
+        return user;
+    }
+
+    /** 加密 **/
+    public static String encrypt(String data, String key) {
+        if (data == null || key == null) {
+            return null;
+        }
+        return toHexString(asString(encrypt_byte(data, key)));
+    }
+
+    /** 解密 **/
+    public static String decrypt(String data, String key) {
+        if (data == null || key == null) {
+            return null;
+        }
+        return new String(RC4Base(HexString2Bytes(data), key));
+    }
+
+    /** 加密字节码 **/
+    public static byte[] encrypt_byte(String data, String key) {
+        if (data == null || key == null) {
+            return null;
+        }
+        byte b_data[] = data.getBytes();
+        return RC4Base(b_data, key);
+    }
+
+    private static String asString(byte[] buf) {
+        StringBuffer strbuf = new StringBuffer(buf.length);
+        for (int i = 0; i < buf.length; i++) {
+            strbuf.append((char) buf[i]);
+        }
+        return strbuf.toString();
+    }
+
+    private static byte[] initKey(String aKey) {
+        byte[] b_key = aKey.getBytes();
+        byte state[] = new byte[256];
+
+        for (int i = 0; i < 256; i++) {
+            state[i] = (byte) i;
+        }
+        int index1 = 0;
+        int index2 = 0;
+        if (b_key == null || b_key.length == 0) {
+            return null;
+        }
+        for (int i = 0; i < 256; i++) {
+            index2 = ((b_key[index1] & 0xff) + (state[i] & 0xff) + index2) & 0xff;
+            byte tmp = state[i];
+            state[i] = state[index2];
+            state[index2] = tmp;
+            index1 = (index1 + 1) % b_key.length;
+        }
+        return state;
+    }
+
+    private static String toHexString(String s) {
+        String str = "";
+        for (int i = 0; i < s.length(); i++) {
+            int ch = (int) s.charAt(i);
+            String s4 = Integer.toHexString(ch & 0xFF);
+            if (s4.length() == 1) {
+                s4 = '0' + s4;
+            }
+            str = str + s4;
+        }
+        return str;// 0x表示十六进制
+    }
+
+    private static byte[] HexString2Bytes(String src) {
+        int size = src.length();
+        byte[] ret = new byte[size / 2];
+        byte[] tmp = src.getBytes();
+        for (int i = 0; i < size / 2; i++) {
+            ret[i] = uniteBytes(tmp[i * 2], tmp[i * 2 + 1]);
+        }
+        return ret;
+    }
+
+    private static byte uniteBytes(byte src0, byte src1) {
+        char _b0 = (char) Byte.decode("0x" + new String(new byte[] { src0 })).byteValue();
+        _b0 = (char) (_b0 << 4);
+        char _b1 = (char) Byte.decode("0x" + new String(new byte[] { src1 })).byteValue();
+        byte ret = (byte) (_b0 ^ _b1);
+        return ret;
+    }
+
+    private static byte[] RC4Base(byte[] input, String mKkey) {
+        int x = 0;
+        int y = 0;
+        byte key[] = initKey(mKkey);
+        int xorIndex;
+        byte[] result = new byte[input.length];
+
+        for (int i = 0; i < input.length; i++) {
+            x = (x + 1) & 0xff;
+            y = ((key[x] & 0xff) + y) & 0xff;
+            byte tmp = key[x];
+            key[x] = key[y];
+            key[y] = tmp;
+            xorIndex = ((key[x] & 0xff) + (key[y] & 0xff)) & 0xff;
+            result[i] = (byte) (input[i] ^ key[xorIndex]);
+        }
+        return result;
+    }
+}
+```
+
+## 使用时用到的问题与解决方案
+
+1. 使用 `jwt` 时，可以通过 `jwt` 官网进行 `token` 解析,来获取用户的基本信息。
+
+   **产生原因：**`jwt` 只保证了 token信息的不可修改性。为保证其隐蔽性。
+
+   **解决方法：**对用户信息对称加密，从而保证`jwt`中存储的是加密的数据，后台通过jwt验证完成之后，在对得到的数据进行解密。从而拿到用户信息。
+
+2. 当后台用户已被删除或锁定，`jwt token ` 无法保证数据信息与数据库一致性。
+
+   **产生原因：**由于`jwt token` 是客户端存储，当管理端进行用户信息修改、锁定或其权限修改时，无法对`token`进行及时刷新。
+
+   **目前解决方案：**原生 `token` + 临时`token` 进行身份验证。原生`token` 用于保存用户唯一标识、以及登录时效，有效时间为 14天或1小时，具体由客户是否选择自动登录来抉择。临时`token` 用于存储用户信息，有效时间 10 秒。当用户用只拥有原生`token`时，则进行数据库查询并为其生成临时token。这样当用户的信息或权限变化时，最多拥有 10 s延迟。
+
+   **缺陷：** 数据库压力较大 , 无法适应高并发场景。(当前项目 qps 小)，存在10s延迟
+
+   **其他方案(未实现):**  去掉临时`token`，程序增加缓存(可用 `hashMap +synchrnized`或 `concurrentHashMap` 实现)，当用户信息修改时，将用户信息同步到缓存中。每次通过缓存判断当前信息是否修改，若修改则重新生成`token` 并删除缓存内信息。

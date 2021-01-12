@@ -146,6 +146,187 @@ public class Application {
 
 ## DI
 
+### DefaultListableBeanfactory继承体系
+
+![image-20210112105319184](pic\image-20210112105319184.png)
+
+### 大致流程
+
+1. `AbstractBeanfactory#getBean(String name)` 调用 `AbstractBeanfactory#doGetBean()`  进行`bean` 的获取。
+
+2. `AbstractBeanfactory#doGetBean()`  通过自身的`transformedBeanName` 获取bean名称，默认为 类名首字母小写。
+
+   之后判断是否已经存在缓存，如果存在则直接从缓存中获取。
+
+   ```java
+   //获取单例缓存
+   Object sharedInstance = getSingleton(beanName);
+   //若存在单例缓存，则返回对应实例
+   if (sharedInstance != null && args == null) {
+       if (logger.isDebugEnabled()) {
+           if (isSingletonCurrentlyInCreation(beanName)) {
+               logger.debug("Returning eagerly cached instance of singleton bean '" + beanName +
+                            "' that is not fully initialized yet - a consequence of a circular reference");
+           }
+           else {
+               logger.debug("Returning cached instance of singleton bean '" + beanName + "'");
+           }
+       }
+       bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
+   }
+   ```
+
+   如果不存在缓存，则通过调用自身方法`getMergedLocalBeanDefinition(String beanName)` 获取对应的BeanDefinition对象，然后执行以下代码进行创建对应实例
+
+   ```java
+   //如果bean是单例模式
+   if (mbd.isSingleton()) {
+       sharedInstance = getSingleton(beanName, new ObjectFactory<Object>() {
+           public Object getObject() throws BeansException {
+               try {
+                   return createBean(beanName, mbd, args);
+               }
+               catch (BeansException ex) {
+                   destroySingleton(beanName);
+                   throw ex;
+               }
+           }
+       });
+       bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+   }
+   //如果bean 是原型模式
+   else if (mbd.isPrototype()) {
+       Object prototypeInstance = null;
+       try {
+           beforePrototypeCreation(beanName);
+           prototypeInstance = createBean(beanName, mbd, args);
+       }
+       finally {
+           afterPrototypeCreation(beanName);
+       }
+       bean = getObjectForBeanInstance(prototypeInstance, name, beanName, mbd);
+   }
+   //否则 bean 是 request、session、global session 走以下逻辑
+   else {
+       String scopeName = mbd.getScope();
+       final Scope scope = this.scopes.get(scopeName);
+       if (scope == null) {
+           throw new IllegalStateException("No Scope registered for scope '" + scopeName + "'");
+       }
+       try {
+           Object scopedInstance = scope.get(beanName, new ObjectFactory<Object>() {
+               public Object getObject() throws BeansException {
+                   beforePrototypeCreation(beanName);
+                   try {
+                       return createBean(beanName, mbd, args);
+                   }
+                   finally {
+                       afterPrototypeCreation(beanName);
+                   }
+               }
+           });
+           bean = getObjectForBeanInstance(scopedInstance, name, beanName, mbd);
+       }
+       catch (IllegalStateException ex) {
+           throw new BeanCreationException(beanName,"Scope '" + scopeName + "' is not active for the current thread; " +					"consider defining a scoped proxy for this bean if you intend to refer to it from a singleton",ex);
+       }
+   }
+   ```
+
+   目前只进行单例模式，也就是以下代码
+
+   ```java
+   //通过缓存获取原生实例对象，若不存在则 调用 ObjectFactory 的 getObject() 进行创建。
+   sharedInstance = getSingleton(beanName, new ObjectFactory<Object>() {
+       public Object getObject() throws BeansException {
+           try {
+               return createBean(beanName, mbd, args);
+           }
+           catch (BeansException ex) {
+               destroySingleton(beanName);
+               throw ex;
+           }
+       }
+   });
+   //获取bean 实例
+   bean = getObjectForBeanInstance(sharedInstance, name, beanName, mbd);
+   ```
+
+5. 所以`AbstractBeanFactory#doGetBean()` 方法最后会调用子类`AbstractAutowiredCalableBeanfactory#createBean()`方法，进行bean 对象的创建。
+
+   `AbstractAutowiredCalableBeanfactory#createBean()` 调用自身的`doCreateBean()` 进行实例创建。
+
+6. `AbstractAutowiredCalableBeanfactory#doCreateBean()` 首先根据 `beanName`从缓存中获取`BeanWapper` 对象，若缓存中不存在，则调用自身的`createBeanInstance()` 创建一个`BeanWapper`.
+
+7. `createBeanInstance()`  调用自身的 `instantiateBean()` 进行 对象的创建，`instantiateBean()` 首先调用 `SimpleInstantiationStrategy# instantiate()`  生成对象实例，然后将对象实例封装到`beanWapper中`，  `SimpleInstantiationStrategy# instantiate()`  代码如下：
+
+   ```java
+   //若bean 不存在 lookup-method和replace-method，则通过 bean 的构造方法创建对象实例并返回。
+   if (beanDefinition.getMethodOverrides().isEmpty()) {
+       Constructor<?> constructorToUse;
+       synchronized (beanDefinition.constructorArgumentLock) {
+           constructorToUse = (Constructor<?>) beanDefinition.resolvedConstructorOrFactoryMethod;
+           if (constructorToUse == null) {
+               final Class clazz = beanDefinition.getBeanClass();
+               if (clazz.isInterface()) {
+                   throw new BeanInstantiationException(clazz, "Specified class is an interface");
+               }
+               try {
+                   if (System.getSecurityManager() != null) {
+                       constructorToUse = AccessController.doPrivileged(new PrivilegedExceptionAction<Constructor>() {
+                           public Constructor run() throws Exception {
+                               return clazz.getDeclaredConstructor((Class[]) null);
+                           }
+                       });
+                   }
+                   else {
+                       constructorToUse =	clazz.getDeclaredConstructor((Class[]) null);
+                   }
+                   beanDefinition.resolvedConstructorOrFactoryMethod = constructorToUse;
+               }
+               catch (Exception ex) {
+                   throw new BeanInstantiationException(clazz, "No default constructor found", ex);
+               }
+           }
+       }
+       return BeanUtils.instantiateClass(constructorToUse);
+   }
+   //否则 需要通过cglib动态代理、生成代理对象并返回代理对象。
+   else {
+       // Must generate CGLIB subclass.
+       return instantiateWithMethodInjection(beanDefinition, beanName, owner);
+   }
+   ```
+
+8. 第六步拿到`beanWapper` 以后 `AbstractAutowireCapableBeanFactory#doCreateBean()` 将调用自身的`populateBean()`  对`beanwapper` 对象的成员属性进行注入对应的值。
+
+9. `AbstractAutowireCapableBeanFactory#populateBean()` 方法，代码如下：
+
+   ```java
+   //获取beanDefinition 需要注入的对象
+   PropertyValues pvs = mbd.getPropertyValues();
+   //根据beanDefinition 配置对应方式
+   if (mbd.getResolvedAutowireMode() == RootBeanDefinition.AUTOWIRE_BY_NAME ||
+       mbd.getResolvedAutowireMode() == RootBeanDefinition.AUTOWIRE_BY_TYPE) {
+       MutablePropertyValues newPvs = new MutablePropertyValues(pvs);
+   	
+       // 根据bean name 进行注入
+       if (mbd.getResolvedAutowireMode() == RootBeanDefinition.AUTOWIRE_BY_NAME) {
+           autowireByName(beanName, mbd, bw, newPvs);
+       }
+   
+       // 根据 bean type 进行注入
+       if (mbd.getResolvedAutowireMode() == RootBeanDefinition.AUTOWIRE_BY_TYPE) {
+           autowireByType(beanName, mbd, bw, newPvs);
+       }
+   	// 返回对应成员属性的列表（成员属性已有对应的值）
+       pvs = newPvs;
+   }
+   
+   ```
+
+   FactoryBeanRegistrySupport#factoryBeanObjectCache 单例对象的缓存
+
 ## AOP
 
 ## MVC
